@@ -146,11 +146,11 @@ if __name__ == '__main__':
     S = Separator()
 
     S.load_camera_info(\
-        "/home/yyhu/Documents/CMU/AirLab/Zeng/Lenacv/Calibration/calibrationdata/left.yaml", \
+        "/home/yyhu/Documents/CMU/AirLab/Zeng/Lenacv/Calibration/calibrationdata_20180528/left.yaml", \
         S.cameraInfoMsgs[0])
         
     S.load_camera_info(\
-        "/home/yyhu/Documents/CMU/AirLab/Zeng/Lenacv/Calibration/calibrationdata/right.yaml", \
+        "/home/yyhu/Documents/CMU/AirLab/Zeng/Lenacv/Calibration/calibrationdata_20180528/right.yaml", \
         S.cameraInfoMsgs[1])
 
     rospy.spin()
