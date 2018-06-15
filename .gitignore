@@ -3,7 +3,6 @@
 *.png
 *.jpg
 *.zip
-CMakeLists.txt
 libuvc_ros
 zed-ros-wrapper
 .vscode/
