@@ -140,6 +140,7 @@ include_directories(
 
 # >>>
 # Search the ./src folder for .cpp files.
+# FILE(GLOB_RECURSE SRC_LIST main.cpp xiApiPlusOcv.cpp StereoXiCamera.cpp)
 FILE(GLOB_RECURSE SRC_LIST *.cpp)
 
 IF (SRC_LIST)
