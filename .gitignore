@@ -6,6 +6,6 @@
 libuvc_ros
 zed-ros-wrapper
 .vscode/
-ROS_P2.code-workspace
+*.code-workspace
 stereo_xi_camera/output/
 

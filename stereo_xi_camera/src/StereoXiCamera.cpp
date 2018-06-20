@@ -190,7 +190,7 @@ int StereoXiCamera::EXPOSURE_MILLISEC(int val)
     return val * EXPOSURE_MILLISEC_BASE;
 }
 
-// =============++++== Getters and setters. =========================
+// ================== Getters and setters. =========================
 
 void StereoXiCamera::set_autogain_exposure_priority(double val)
 {

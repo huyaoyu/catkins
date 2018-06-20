@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
 
 #include <stdio.h>
 #include "StereoXiCamera.hpp"
@@ -27,6 +28,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include <image_transport/image_transport.h>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 
@@ -86,6 +88,7 @@ int main(int argc, char* argv[])
 	int    pBandwidthMargin          = DEFAULT_BANDWIDTH_MARGIN;
 	int    pFlagWriteImage           = 0;
 	int    pLoopRate                 = DEFAULT_LOOP_RATE;
+	std::string pOutDir              = OUT_DIR;
 
 	std::string pXICameraSN_0 = XI_CAMERA_SN_0;
 	std::string pXICameraSN_1 = XI_CAMERA_SN_1;
@@ -96,6 +99,7 @@ int main(int argc, char* argv[])
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pBandwidthMargin", pBandwidthMargin, DEFAULT_BANDWIDTH_MARGIN);
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pLoopRate", pLoopRate, DEFAULT_LOOP_RATE);
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pFlagWriteImage", pFlagWriteImage, 0);
+	ROSLAUNCH_GET_PARAM(nodeHandle, "pOutDir", pOutDir, OUT_DIR);
 
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pXICameraSN_0", pXICameraSN_0, XI_CAMERA_SN_0);
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pXICameraSN_1", pXICameraSN_1, XI_CAMERA_SN_1);
@@ -139,6 +143,10 @@ int main(int argc, char* argv[])
 		std::stringstream ss;   // String stream for outputing info.
 		ros::Time rosTimeStamp; // ROS time stamp for the header of published ROS image messages.
 
+		std::vector<int> jpegParams;
+		jpegParams.push_back( CV_IMWRITE_JPEG_QUALITY );
+		jpegParams.push_back( 100 );
+
 		int nImages = 0; // Image counter.
 
 		// Begin running ROS node.
@@ -168,14 +176,19 @@ int main(int argc, char* argv[])
 			LOOP_CAMERAS_BEGIN
 				// Clear the temporary sting stream.
 				ss.flush();	ss.str(""); ss.clear();
-				ss << OUT_DIR << "/" << nImages << "_" << loopIdx << ".jpg";
+				ss << pOutDir << "/" << nImages << "_" << loopIdx;
 
 				ROS_INFO( "%s", ss.str().c_str() );
 
 				// Save the captured image to file system.
 				if ( 1 == pFlagWriteImage )
 				{
-					imwrite(ss.str(), cvImages[loopIdx]);
+					std::string yamlFilename = ss.str() + ".yaml";
+					std::string imgFilename = ss.str() + ".bmp";
+
+					// FileStorage cfFS(yamlFilename, FileStorage::WRITE);
+					// cfFS << "frame" << nImages << "image_id" << loopIdx << "raw_data" << cvImages[loopIdx];
+					imwrite(imgFilename, cvImages[loopIdx], jpegParams);
 				}
 				
 				ROS_INFO( "Camera %d captured image (%d, %d).", loopIdx, cvImages[loopIdx].rows, cvImages[loopIdx].cols );
