@@ -5,7 +5,8 @@
 using namespace sxc;
 
 StereoXiCamera::StereoXiCamera(std::string &camSN0, std::string &camSN1)
-: TRIGGER_SOFTWARE(1), EXPOSURE_MILLISEC_BASE(1000), CAM_IDX_0(0), CAM_IDX_1(1)
+: TRIGGER_SOFTWARE(1), EXPOSURE_MILLISEC_BASE(1000), CAM_IDX_0(0), CAM_IDX_1(1),
+  XI_DEFAULT_TOTAL_BANDWIDTH(2400), XI_DEFAULT_BANDWIDTH_MARGIN(10)
 {
     mCamSN[CAM_IDX_0] = camSN0;
     mCamSN[CAM_IDX_1] = camSN1;
@@ -114,8 +115,8 @@ void StereoXiCamera::open_and_common_settings()
 void StereoXiCamera::setup_camera_common(xiAPIplusCameraOcv& cam)
 {
     // Set exposure time.
-	cam.SetAutoExposureAutoGainExposurePriority(1.0);
-	cam.SetAutoExposureTopLimit( EXPOSURE_MILLISEC(100) );
+	cam.SetAutoExposureAutoGainExposurePriority( mXi_AutoGainExposurePriority );
+	cam.SetAutoExposureTopLimit( EXPOSURE_MILLISEC( mXi_AutoExposureTopLimit ) );
 	cam.EnableAutoExposureAutoGain();
 
 	// Enable auto-whitebalance.
@@ -129,11 +130,59 @@ void StereoXiCamera::setup_camera_common(xiAPIplusCameraOcv& cam)
 	cam.EnableSensorDefectsCorrection();
 
 	// Bandwith.
-	int cameraDataRate = (int)( 2400 / 2 * 90 / 100 );
+	int cameraDataRate = (int)( mXi_TotalBandwidth / 2.0 * ( 100.0 - mXi_BandwidthMargin ) / 100 );
+    mXi_MaxFrameRate = mXi_TotalBandwidth / 2.0 / cameraDataRate;
 	cam.SetBandwidthLimit( cameraDataRate );
 }
 
 int StereoXiCamera::EXPOSURE_MILLISEC(int val)
 {
     return val * EXPOSURE_MILLISEC_BASE;
+}
+
+// =============++++== Getters and setters. =========================
+
+void StereoXiCamera::set_autogain_exposure_priority(double val)
+{
+    mXi_AutoGainExposurePriority = val;
+}
+
+double StereoXiCamera::get_autogain_exposure_priority(void)
+{
+    return mXi_AutoGainExposurePriority;
+}
+
+void StereoXiCamera::set_autoexposure_top_limit(int tLimit)
+{
+    mXi_AutoExposureTopLimit = tLimit;
+}
+
+int StereoXiCamera::get_autoexposure_top_limit(void)
+{
+    return mXi_AutoExposureTopLimit;
+}
+
+void StereoXiCamera::set_total_bandwidth(int b)
+{
+    mXi_TotalBandwidth = b;
+}
+
+int StereoXiCamera::get_total_bandwidth(void)
+{
+    return mXi_TotalBandwidth;
+}
+
+void StereoXiCamera::set_bandwidth_margin(int m)
+{
+    mXi_BandwidthMargin = m;
+}
+
+int StereoXiCamera::get_bandwidth_margin(void)
+{
+    return mXi_BandwidthMargin;
+}
+
+double StereoXiCamera::get_max_frame_rate(void)
+{
+    return mXi_MaxFrameRate;
 }

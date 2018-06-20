@@ -43,6 +43,19 @@ public:
     void stop_acquisition(int waitMS = 500);
     void close();
 
+    // Getters and setters.
+    void   set_autogain_exposure_priority(double val);
+    double get_autogain_exposure_priority(void);
+
+    void   set_autoexposure_top_limit(int tLimit);
+    int    get_autoexposure_top_limit(void);
+
+    void   set_total_bandwidth(int b);
+    int    get_total_bandwidth(void);
+    void   set_bandwidth_margin(int m);
+    int    get_bandwidth_margin(void);
+    double get_max_frame_rate(void);
+
 protected:
     void prepare_before_opening();
     void open_and_common_settings();
@@ -59,9 +72,18 @@ protected:
     const int CAM_IDX_0;
     const int CAM_IDX_1;
 
+    const int XI_DEFAULT_TOTAL_BANDWIDTH;
+    const int XI_DEFAULT_BANDWIDTH_MARGIN;
+
     std::string mCamSN[N_XI_C];
 
     xiAPIplusCameraOcv mCams[N_XI_C];
+
+    double mXi_AutoGainExposurePriority;
+    int    mXi_AutoExposureTopLimit;     // Milisecond.
+    int    mXi_TotalBandwidth;           // MByte/s.
+    int    mXi_BandwidthMargin;          // %.
+    double mXi_MaxFrameRate;             // fps.
 };
 
 }

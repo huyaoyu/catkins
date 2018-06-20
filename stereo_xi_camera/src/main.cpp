@@ -10,7 +10,8 @@
  * Date
  * ====
  *
- * Created: 2018-06-04
+ * Created:  2018-06-04
+ * Modified: 2018-06-19
  *
  */
 
@@ -59,39 +60,49 @@ int main(int argc, char* argv[])
 		imageTransport.advertise(TOPIC_NAME_LEFT_IMAGE, 1), 
 		imageTransport.advertise(TOPIC_NAME_RIGHT_IMAGE, 1) };
 
-  	ros::Rate loop_rate(2);
+  	ros::Rate loop_rate(3);
 
+	// The ROS message to be published.
 	sensor_msgs::ImagePtr msgImage;
 
+	// The object of stereo camera based on the XIMEA cameras.
 	sxc::StereoXiCamera stereoXiCamera = sxc::StereoXiCamera(XI_CAMERA_SN_0, XI_CAMERA_SN_1);
+	// Configure the stereo camera.
+	stereoXiCamera.set_autogain_exposure_priority(1.0);
+	stereoXiCamera.set_autoexposure_top_limit(200);
+	stereoXiCamera.set_total_bandwidth(2400);
+	stereoXiCamera.set_bandwidth_margin(10);
 
+	// Run the ROS node.
 	try
 	{
+		// Pre-open, open and configure the stereo camera.
 		stereoXiCamera.open();
 
 		// Start acquisition.
-		std::cout << "Start acquisition." << std::endl;
-
+		ROS_INFO("%s", "Start acquisition.");
 		stereoXiCamera.start_acquisition();
 
-		Mat cvImages[2];
-		std::stringstream ss;
+		// Temporary variables.
+		Mat cvImages[2];        // OpenCV Mat array to hold the images.
+		std::stringstream ss;   // String stream for outputing info.
+		ros::Time rosTimeStamp; // ROS time stamp for the header of published ROS image messages.
 
-		ros::Time rosTimeStamp;
+		int nImages = 0; // Image counter.
 
-		int nImages = 0;
-
+		// Begin running ROS node.
 		while(ros::ok())
 		{
 			if ( 0 != N_IMAGES )
 			{
 				if ( nImages >= N_IMAGES )
 				{
+					// Stop this ROS node.
 					break;
 				}
 			}
 
-			std::cout << "nImages = " << nImages << std::endl;
+			ROS_INFO("nImages = %d", nImages);
 
 			// Trigger.
 			stereoXiCamera.software_trigger();
@@ -99,48 +110,54 @@ int main(int argc, char* argv[])
 			// Get images.
 			stereoXiCamera.get_images( cvImages[0], cvImages[1] );
 
+			// Prepare the time stamp for the header.
 			rosTimeStamp = ros::Time::now();
 
+			// Convert the image into ROS image message.
 			LOOP_CAMERAS_BEGIN
-				ss.flush();
-				ss.str("");
-				ss.clear();
-
+				// Clear the temporary sting stream.
+				ss.flush();	ss.str(""); ss.clear();
 				ss << OUT_DIR << "/" << nImages << "_" << loopIdx << ".jpg";
+
+				ROS_INFO( "%s", ss.str().c_str() );
 
 				// Save the captured image to file system.
 				// imwrite(ss.str(), cvImages[loopIdx]);
-
-				std::cout << "Camera " << loopIdx << " captured image." << std::endl;
+				ROS_INFO( "Camera %d captured image.", loopIdx );
 
 				// Publish images.
 				msgImage = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cvImages[loopIdx]).toImageMsg();
-				msgImage->header.seq = nImages;
+				msgImage->header.seq   = nImages;
 				msgImage->header.stamp = rosTimeStamp;
 
 				publishersImage[loopIdx].publish(msgImage);
+
 				ROS_INFO("%s", "Message published.");
 			LOOP_CAMERAS_END
 
+			// ROS spin.
 			ros::spinOnce();
 
+			// Sleep().
 			loop_rate.sleep();
+
 			++nImages;
 		}
 
 		// Stop acquisition.
 		stereoXiCamera.stop_acquisition();
 
-		std::cout << "Begin waiting..." << std::endl;
 		cvWaitKey(500);
+
+		ROS_INFO("Stereo camera stopped.");
 
 		// Close.
 		stereoXiCamera.close();
-		std::cout << "Done." << std::endl;
+		ROS_INFO("Stereo camera closed.");
 	}
 	catch ( xiAPIplus_Exception& exp )
 	{
-		std::cout << "Error:" << std::endl;
+		ROS_ERROR("Error.");
 		exp.PrintError();
 		ret = -1;
 	}
