@@ -79,6 +79,55 @@ void StereoXiCamera::close()
     LOOP_CAMERAS_REVERSE_END
 }
 
+void StereoXiCamera::put_sensor_filter_array(int idx, std::string &strFilterArray)
+{
+    XI_COLOR_FILTER_ARRAY filterArray = mCams[idx].GetSensorColorFilterArray();
+
+    switch ( filterArray )
+    {
+        case (XI_CFA_NONE):
+        {
+            strFilterArray = "none";
+            break;
+        }
+        case (XI_CFA_BAYER_RGGB):
+        {
+            strFilterArray = "bayer_rggb8";
+            break;
+        }
+        case (XI_CFA_CMYG):
+        {
+            strFilterArray = "cmyg";
+            break;
+        }
+        case (XI_CFA_RGR):
+        {
+            strFilterArray = "rgr";
+            break;
+        }
+        case (XI_CFA_BAYER_BGGR):
+        {
+            strFilterArray = "bayer_bggr8";
+            break;
+        }
+        case (XI_CFA_BAYER_GRBG):
+        {
+            strFilterArray = "bayer_grbg8";
+            break;
+        }
+        case (XI_CFA_BAYER_GBRG):
+        {
+            strFilterArray = "bayer_gbrg8";
+            break;
+        }
+        default:
+        {
+            strFilterArray = "error";
+            break;
+        }
+    }
+}
+
 void StereoXiCamera::prepare_before_opening()
 {
     // Bandwidth.
@@ -124,6 +173,7 @@ void StereoXiCamera::setup_camera_common(xiAPIplusCameraOcv& cam)
 
 	// Image format.
 	cam.SetImageDataFormat(XI_RGB24);
+	// cam.SetImageDataFormat(XI_RAW8);
 
 	// Sensor defects selector.
 	cam.SetSensorDefectsCorrectionListSelector(XI_SENS_DEFFECTS_CORR_LIST_SEL_USER0);

@@ -43,6 +43,8 @@ public:
     void stop_acquisition(int waitMS = 500);
     void close();
 
+    void put_sensor_filter_array(int idx, std::string &strFilterArray);
+
     // Getters and setters.
     void   set_autogain_exposure_priority(double val);
     double get_autogain_exposure_priority(void);
@@ -81,7 +83,7 @@ protected:
 
     double mXi_AutoGainExposurePriority;
     int    mXi_AutoExposureTopLimit;     // Milisecond.
-    int    mXi_TotalBandwidth;           // MByte/s.
+    int    mXi_TotalBandwidth;           // Mbits/s.
     int    mXi_BandwidthMargin;          // %.
     double mXi_MaxFrameRate;             // fps.
 };
