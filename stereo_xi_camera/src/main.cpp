@@ -231,8 +231,13 @@ int main(int argc, char* argv[])
 		ROS_ERROR("Exception catched.");
 		if ( std::string const * expInfoString = boost::get_error_info<sxc::ExceptionInfoString>(ex) )
 		{
-			std::cerr << expInfoString << std::endl;
+			ROS_ERROR("%s", expInfoString->c_str());
 		}
+
+		std::string diagInfo = boost::diagnostic_information(ex, true);
+
+		ROS_ERROR("%s", diagInfo.c_str());
+
 		ret = -1;
 	}
 

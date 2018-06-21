@@ -49,7 +49,7 @@
         std::stringstream v##_ss;\
         v##_ss << "Argument out of range, " \
                << #v << " = " << v \
-               << ", [" << minV << ", " << maxV << "]."\
+               << ", [" << minV << ", " << maxV << "]. "\
                << "Value not changed.";\
         BOOST_THROW_EXCEPTION( argument_out_of_range() << ExceptionInfoString(v##_ss.str()) );\
     }
