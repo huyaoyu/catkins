@@ -1,12 +1,30 @@
 #ifndef __STEREOXICAMERA_H__
 #define __STEREOXICAMERA_H__
 
+// =============== C headers. ====================
+
+/* No hearders specified. */
+
+// ============ C++ standard headers. ============
+
+#include <exception>
 #include <string>
+
+// =========== System headers. =================
+
+#include <boost/exception/all.hpp>
+#include <boost/shared_ptr.hpp>
+
+// ============ Field specific headers. ========
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+// ========== Application headers. ==============
+
 #include "xiApiPlusOcv.hpp"
+
+// ============ Macros. ========================
 
 #define SXC_NULL (0)
 
@@ -26,7 +44,46 @@
 #define LOOP_CAMERAS_REVERSE_END \
 	}
 
+#define EXCEPTION_ARG_OUT_OF_RANGE(v, minV, maxV) \
+    {\
+        std::stringstream v##_ss;\
+        v##_ss << "Argument out of range, " \
+               << #v << " = " << v \
+               << ", [" << minV << ", " << maxV << "]."\
+               << "Value not changed.";\
+        BOOST_THROW_EXCEPTION( argument_out_of_range() << ExceptionInfoString(v##_ss.str()) );\
+    }
+
+#define CAMERA_EXCEPTION_DESCRIPTION_BUFFER_SIZE (1024)
+#define EXCEPTION_CAMERA_API(camEx) \
+    {\
+        char camEx##_buffer[CAMERA_EXCEPTION_DESCRIPTION_BUFFER_SIZE];\
+        std::stringstream camEx##_ss;\
+        \
+        camEx.GetDescription(camEx##_buffer, CAMERA_EXCEPTION_DESCRIPTION_BUFFER_SIZE);\
+        \
+        camEx##_ss << "Camera API throws exception. Error number: "\
+                   << camEx.GetErrorNumber()\
+                   << ", with description \"" << camEx##_buffer << "\"";\
+        \
+        BOOST_THROW_EXCEPTION( camera_api_exception() << ExceptionInfoString(camEx##_ss.str()) );\
+    }
+
+// ============ File-wise or global variables. ===========
+
+/* No variables declared or initialized. */
+
+// ============= Class definitions. ======================
+
 namespace sxc {
+
+struct exception_base        : virtual std::exception, virtual boost::exception { };
+struct bad_argument          : virtual exception_base { };
+struct argument_out_of_range : virtual bad_argument { };
+struct arguemnt_null         : virtual bad_argument { };
+struct camera_api_exception  : virtual exception_base { };
+
+typedef boost::error_info<struct tag_info_string, std::string> ExceptionInfoString;
 
 class StereoXiCamera 
 {
@@ -67,6 +124,16 @@ protected:
 
     int EXPOSURE_MILLISEC(int val);
     
+public:
+    const double AUTO_GAIN_EXPOSURE_PRIORITY_MAX;
+    const double AUTO_GAIN_EXPOSURE_PRIORITY_MIM;
+    const int    AUTO_EXPOSURE_TOP_LIMIT_MAX;     // Millisecond.
+    const int    AUTO_EXPOSURE_TOP_LIMIT_MIN;     // Millisecond.
+    const int    TOTAL_BANDWIDTH_MAX;             // MBit/s.
+    const int    TOTAL_BANDWIDTH_MIN;             // MBit/s.
+    const int    BANDWIDTH_MARGIN_MAX;            // %.
+    const int    BANDWIDTH_MARGIN_MIN;            // %.
+
 protected:
     const int TRIGGER_SOFTWARE;
     const int EXPOSURE_MILLISEC_BASE;
@@ -83,7 +150,7 @@ protected:
 
     double mXi_AutoGainExposurePriority;
     int    mXi_AutoExposureTopLimit;     // Milisecond.
-    int    mXi_TotalBandwidth;           // Mbits/s.
+    int    mXi_TotalBandwidth;           // MBit/s.
     int    mXi_BandwidthMargin;          // %.
     double mXi_MaxFrameRate;             // fps.
 };

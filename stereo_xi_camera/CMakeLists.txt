@@ -168,11 +168,13 @@ FIND_LIBRARY( LIB_OPENCV_CORE NAMES opencv_core )
 FIND_LIBRARY( LIB_OPENCV_HIGHGUI NAMES opencv_highgui )
 FIND_LIBRARY( LIB_OPENCV_IMGPROC NAMES opencv_imgproc )
 FIND_LIBRARY( LIB_XIMEA NAMES m3api )
+FIND_LIBRARY( LIB_BOOST_EXCEPTION NAMES boost_exception )
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${LIB_XIMEA} ${LIB_OPENCV_CORE} ${LIB_OPENCV_HIGHGUI} ${LIB_OPENCV_IMGPROC}
+  ${LIB_BOOST_EXCEPTION}
 )
 
 #############

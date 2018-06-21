@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <stdio.h>
+
 #include "StereoXiCamera.hpp"
 
 // ========= Includes for ROS and OpenCV. ===================
@@ -117,15 +118,16 @@ int main(int argc, char* argv[])
 
 	// The object of stereo camera based on the XIMEA cameras.
 	sxc::StereoXiCamera stereoXiCamera = sxc::StereoXiCamera(XI_CAMERA_SN_0, XI_CAMERA_SN_1);
-	// Configure the stereo camera.
-	stereoXiCamera.set_autogain_exposure_priority(pAutoGainExposurePriority);
-	stereoXiCamera.set_autoexposure_top_limit(pAutoExposureTopLimit);
-	stereoXiCamera.set_total_bandwidth(pTotalBandwidth);
-	stereoXiCamera.set_bandwidth_margin(pBandwidthMargin);
 
 	// Run the ROS node.
 	try
 	{
+		// Configure the stereo camera.
+		stereoXiCamera.set_autogain_exposure_priority(pAutoGainExposurePriority);
+		stereoXiCamera.set_autoexposure_top_limit(pAutoExposureTopLimit);
+		stereoXiCamera.set_total_bandwidth(pTotalBandwidth);
+		stereoXiCamera.set_bandwidth_margin(pBandwidthMargin);
+
 		// Pre-open, open and configure the stereo camera.
 		stereoXiCamera.open();
 
@@ -224,10 +226,13 @@ int main(int argc, char* argv[])
 		stereoXiCamera.close();
 		ROS_INFO("Stereo camera closed.");
 	}
-	catch ( xiAPIplus_Exception& exp )
+	catch ( boost::exception &ex )
 	{
-		ROS_ERROR("Error.");
-		exp.PrintError();
+		ROS_ERROR("Exception catched.");
+		if ( std::string const * expInfoString = boost::get_error_info<sxc::ExceptionInfoString>(ex) )
+		{
+			std::cerr << expInfoString << std::endl;
+		}
 		ret = -1;
 	}
 

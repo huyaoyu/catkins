@@ -1,11 +1,16 @@
 #include <iostream>
+#include <sstream>
 
 #include "StereoXiCamera.hpp"
 
 using namespace sxc;
 
 StereoXiCamera::StereoXiCamera(std::string &camSN0, std::string &camSN1)
-: TRIGGER_SOFTWARE(1), EXPOSURE_MILLISEC_BASE(1000), CAM_IDX_0(0), CAM_IDX_1(1),
+: AUTO_GAIN_EXPOSURE_PRIORITY_MAX(1.0), AUTO_GAIN_EXPOSURE_PRIORITY_MIM(0.49),
+  AUTO_EXPOSURE_TOP_LIMIT_MAX(1000), AUTO_EXPOSURE_TOP_LIMIT_MIN(1),
+  TOTAL_BANDWIDTH_MAX(4000), TOTAL_BANDWIDTH_MIN(2400),
+  BANDWIDTH_MARGIN_MAX(50), BANDWIDTH_MARGIN_MIN(5),
+  TRIGGER_SOFTWARE(1), EXPOSURE_MILLISEC_BASE(1000), CAM_IDX_0(0), CAM_IDX_1(1),
   XI_DEFAULT_TOTAL_BANDWIDTH(2400), XI_DEFAULT_BANDWIDTH_MARGIN(10)
 {
     mCamSN[CAM_IDX_0] = camSN0;
@@ -19,15 +24,29 @@ StereoXiCamera::~StereoXiCamera()
 
 void StereoXiCamera::open()
 {
-    prepare_before_opening();
-    open_and_common_settings();
+    try
+    {
+        prepare_before_opening();
+        open_and_common_settings();
+    }
+    catch ( xiAPIplus_Exception& exp )
+    {
+        EXCEPTION_CAMERA_API(exp);
+    }
 }
 
 void StereoXiCamera::start_acquisition(int waitMS)
 {
-    LOOP_CAMERAS_BEGIN
-        mCams[loopIdx].StartAcquisition();
-    LOOP_CAMERAS_END
+    try
+    {
+        LOOP_CAMERAS_BEGIN
+            mCams[loopIdx].StartAcquisition();
+        LOOP_CAMERAS_END
+    }
+    catch ( xiAPIplus_Exception& exp )
+    {
+        EXCEPTION_CAMERA_API(exp);
+    }
 
     // Wait for a short period of time.
     cvWaitKey(waitMS);
@@ -35,14 +54,28 @@ void StereoXiCamera::start_acquisition(int waitMS)
 
 void StereoXiCamera::software_trigger(void)
 {
-    // Trigger.
-    mCams[CAM_IDX_0].SetTriggerSoftware(TRIGGER_SOFTWARE);
+    try
+    {
+        // Trigger.
+        mCams[CAM_IDX_0].SetTriggerSoftware(TRIGGER_SOFTWARE);
+    }
+    catch ( xiAPIplus_Exception& exp )
+    {
+        EXCEPTION_CAMERA_API(exp);
+    }
 }
 
 void StereoXiCamera::get_images(cv::Mat &img0, cv::Mat &img1)
 {
-    img0 = get_single_image(CAM_IDX_0);
-    img1 = get_single_image(CAM_IDX_1);
+    try
+    {
+        img0 = get_single_image(CAM_IDX_0);
+        img1 = get_single_image(CAM_IDX_1);
+    }
+    catch ( xiAPIplus_Exception& exp )
+    {
+        EXCEPTION_CAMERA_API(exp);
+    }
 }
 
 cv::Mat StereoXiCamera::get_single_image(int idx)
@@ -64,19 +97,33 @@ cv::Mat StereoXiCamera::get_single_image(int idx)
 
 void StereoXiCamera::stop_acquisition(int waitMS)
 {
-    // Stop acquisition.
-    LOOP_CAMERAS_BEGIN
-        mCams[loopIdx].StopAcquisition();
-    LOOP_CAMERAS_END
+    try
+    {
+        // Stop acquisition.
+        LOOP_CAMERAS_BEGIN
+            mCams[loopIdx].StopAcquisition();
+        LOOP_CAMERAS_END
+    }
+    catch ( xiAPIplus_Exception& exp )
+    {
+        EXCEPTION_CAMERA_API(exp);
+    }
 
     cvWaitKey(waitMS);
 }
 
 void StereoXiCamera::close()
 {
-    LOOP_CAMERAS_REVERSE_BEGIN
-        mCams[loopIdx].Close();
-    LOOP_CAMERAS_REVERSE_END
+    try
+    {
+        LOOP_CAMERAS_REVERSE_BEGIN
+            mCams[loopIdx].Close();
+        LOOP_CAMERAS_REVERSE_END
+    }
+    catch ( xiAPIplus_Exception& exp )
+    {
+        EXCEPTION_CAMERA_API(exp);
+    }
 }
 
 void StereoXiCamera::put_sensor_filter_array(int idx, std::string &strFilterArray)
@@ -122,6 +169,7 @@ void StereoXiCamera::put_sensor_filter_array(int idx, std::string &strFilterArra
         }
         default:
         {
+            // Should never reach here.
             strFilterArray = "error";
             break;
         }
@@ -194,7 +242,15 @@ int StereoXiCamera::EXPOSURE_MILLISEC(int val)
 
 void StereoXiCamera::set_autogain_exposure_priority(double val)
 {
-    mXi_AutoGainExposurePriority = val;
+    if ( val < AUTO_GAIN_EXPOSURE_PRIORITY_MIM ||
+         val > AUTO_GAIN_EXPOSURE_PRIORITY_MAX )
+    {
+        EXCEPTION_ARG_OUT_OF_RANGE(val, AUTO_GAIN_EXPOSURE_PRIORITY_MIM, AUTO_GAIN_EXPOSURE_PRIORITY_MAX);
+    }
+    else
+    {
+        mXi_AutoGainExposurePriority = val;
+    }
 }
 
 double StereoXiCamera::get_autogain_exposure_priority(void)
@@ -204,7 +260,15 @@ double StereoXiCamera::get_autogain_exposure_priority(void)
 
 void StereoXiCamera::set_autoexposure_top_limit(int tLimit)
 {
-    mXi_AutoExposureTopLimit = tLimit;
+    if ( tLimit < AUTO_EXPOSURE_TOP_LIMIT_MIN ||
+         tLimit > AUTO_EXPOSURE_TOP_LIMIT_MAX )
+    {
+        EXCEPTION_ARG_OUT_OF_RANGE(tLimit, AUTO_EXPOSURE_TOP_LIMIT_MIN, AUTO_EXPOSURE_TOP_LIMIT_MAX);
+    }
+    else
+    {
+        mXi_AutoExposureTopLimit = tLimit;
+    }
 }
 
 int StereoXiCamera::get_autoexposure_top_limit(void)
@@ -214,7 +278,15 @@ int StereoXiCamera::get_autoexposure_top_limit(void)
 
 void StereoXiCamera::set_total_bandwidth(int b)
 {
-    mXi_TotalBandwidth = b;
+    if ( b < TOTAL_BANDWIDTH_MIN ||
+         b > TOTAL_BANDWIDTH_MAX )
+    {
+        EXCEPTION_ARG_OUT_OF_RANGE(b, TOTAL_BANDWIDTH_MIN, TOTAL_BANDWIDTH_MAX);
+    }
+    else
+    {
+        mXi_TotalBandwidth = b;
+    }
 }
 
 int StereoXiCamera::get_total_bandwidth(void)
@@ -224,7 +296,15 @@ int StereoXiCamera::get_total_bandwidth(void)
 
 void StereoXiCamera::set_bandwidth_margin(int m)
 {
-    mXi_BandwidthMargin = m;
+    if ( m < BANDWIDTH_MARGIN_MIN ||
+         m > BANDWIDTH_MARGIN_MAX )
+    {
+        EXCEPTION_ARG_OUT_OF_RANGE(m, BANDWIDTH_MARGIN_MIN, BANDWIDTH_MARGIN_MAX);
+    }
+    else
+    {
+        mXi_BandwidthMargin = m;
+    }
 }
 
 int StereoXiCamera::get_bandwidth_margin(void)
