@@ -77,6 +77,8 @@
 
 namespace sxc {
 
+typedef float xf;
+
 struct exception_base        : virtual std::exception, virtual boost::exception { };
 struct bad_argument          : virtual exception_base { };
 struct argument_out_of_range : virtual bad_argument { };
@@ -88,6 +90,15 @@ typedef boost::error_info<struct tag_info_string, std::string> ExceptionInfoStri
 class StereoXiCamera 
 {
 public:
+    typedef struct CameraParams
+    {
+        int AEAGEnabled;  // 1 for enabled.
+        xf  AEAGPriority;
+        int exposure;     // Milliseconds.
+        xf  gain;         // db.
+    } CameraParams_t;
+
+public:
     StereoXiCamera(std::string &camSN0, std::string &camSN1);
     ~StereoXiCamera();
 
@@ -96,6 +107,7 @@ public:
 
     void software_trigger(void);
     void get_images(cv::Mat &img0, cv::Mat &img1);
+    void get_images(cv::Mat &img0, cv::Mat &img1, CameraParams_t &camP0, CameraParams_t &camP1);
 
     void stop_acquisition(int waitMS = 500);
     void close();
@@ -103,17 +115,23 @@ public:
     void put_sensor_filter_array(int idx, std::string &strFilterArray);
 
     // Getters and setters.
-    void   set_autogain_exposure_priority(double val);
-    double get_autogain_exposure_priority(void);
+    void set_autogain_exposure_priority(xf val);
+    xf   get_autogain_exposure_priority(void);
 
-    void   set_autoexposure_top_limit(int tLimit);
-    int    get_autoexposure_top_limit(void);
+    void set_autogain_exposure_target_level(xf val);
+    xf   get_autogain_exposure_target_level(void);
 
-    void   set_total_bandwidth(int b);
-    int    get_total_bandwidth(void);
-    void   set_bandwidth_margin(int m);
-    int    get_bandwidth_margin(void);
-    double get_max_frame_rate(void);
+    void set_autoexposure_top_limit(int tLimit);
+    int  get_autoexposure_top_limit(void);
+
+    void set_autogain_top_limit(xf tG);
+    xf   get_autogain_top_limit(void);
+
+    void set_total_bandwidth(int b);
+    int  get_total_bandwidth(void);
+    void set_bandwidth_margin(int m);
+    int  get_bandwidth_margin(void);
+    xf   get_max_frame_rate(void);
 
 protected:
     void prepare_before_opening();
@@ -121,18 +139,28 @@ protected:
     void setup_camera_common(xiAPIplusCameraOcv& cam);
 
     cv::Mat get_single_image(int idx);
+    void put_single_camera_params(xiAPIplusCameraOcv &cam, CameraParams_t &cp);
 
     int EXPOSURE_MILLISEC(int val);
     
 public:
-    const double AUTO_GAIN_EXPOSURE_PRIORITY_MAX;
-    const double AUTO_GAIN_EXPOSURE_PRIORITY_MIM;
-    const int    AUTO_EXPOSURE_TOP_LIMIT_MAX;     // Millisecond.
-    const int    AUTO_EXPOSURE_TOP_LIMIT_MIN;     // Millisecond.
-    const int    TOTAL_BANDWIDTH_MAX;             // MBit/s.
-    const int    TOTAL_BANDWIDTH_MIN;             // MBit/s.
-    const int    BANDWIDTH_MARGIN_MAX;            // %.
-    const int    BANDWIDTH_MARGIN_MIN;            // %.
+    const xf  AUTO_GAIN_EXPOSURE_PRIORITY_MAX;
+    const xf  AUTO_GAIN_EXPOSURE_PRIORITY_MIM;
+    const xf  AUTO_GAIN_EXPOSURE_PRIORITY_DEFAULT;
+    const xf  AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MAX;
+    const xf  AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MIN;
+    const xf  AUTO_GAIN_EXPOSURE_TARGET_LEVEL_DEFAULT;
+    const int AUTO_EXPOSURE_TOP_LIMIT_MAX;         // Millisecond.
+    const int AUTO_EXPOSURE_TOP_LIMIT_MIN;         // Millisecond.
+    const int AUTO_EXPOSURE_TOP_LIMIT_DEFAULT;     // Millisecond.
+    const xf  AUTO_GAIN_TOP_LIMIT_MAX;             // db.
+    const xf  AUTO_GAIN_TOP_LIMIT_MIN;             // db.
+    const xf  AUTO_GAIN_TOP_LIMIT_DEFAULT;         // db.
+    const int TOTAL_BANDWIDTH_MAX;                 // MBit/s.
+    const int TOTAL_BANDWIDTH_MIN;                 // MBit/s.
+    const int BANDWIDTH_MARGIN_MAX;                // %.
+    const int BANDWIDTH_MARGIN_MIN;                // %.
+    const int BANDWIDTH_MARGIN_DEFAULT;            // %.
 
 protected:
     const int TRIGGER_SOFTWARE;
@@ -148,11 +176,13 @@ protected:
 
     xiAPIplusCameraOcv mCams[N_XI_C];
 
-    double mXi_AutoGainExposurePriority;
-    int    mXi_AutoExposureTopLimit;     // Milisecond.
-    int    mXi_TotalBandwidth;           // MBit/s.
-    int    mXi_BandwidthMargin;          // %.
-    double mXi_MaxFrameRate;             // fps.
+    xf  mXi_AutoGainExposurePriority;
+    xf  mXi_AutoGainExposureTargetLevel;
+    int mXi_AutoExposureTopLimit;     // Milisecond.
+    int mXi_AutoGainTopLimit;         // db.
+    int mXi_TotalBandwidth;           // MBit/s.
+    int mXi_BandwidthMargin;          // %.
+    xf  mXi_MaxFrameRate;             // fps.
 };
 
 }

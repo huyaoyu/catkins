@@ -48,11 +48,13 @@ const std::string OUT_DIR = "/home/yyhu/ROS/p2/catkin/src/stereo_xi_camera/outpu
 std::string XI_CAMERA_SN_1 = "CUCAU1814018";
 std::string XI_CAMERA_SN_0 = "CUCAU1814020";
 
-const double DEFAULT_AUTO_GAIN_EXPOSURE_PRIORITY = 1.0;
-const int    DEFAULT_AUTO_EXPOSURE_TOP_LIMIT     = 200;
-const int    DEFAULT_TOTAL_BANDWIDTH             = 2400;
-const int    DEFAULT_BANDWIDTH_MARGIN            = 10;
-const int    DEFAULT_LOOP_RATE                   = 3;
+const double DEFAULT_AUTO_GAIN_EXPOSURE_PRIORITY     = 0.8;
+const double DEFAULT_AUTO_GAIN_EXPOSURE_TARGET_LEVEL = 40.0;
+const int    DEFAULT_AUTO_EXPOSURE_TOP_LIMIT         = 200;  // Millisecond.
+const int    DEFAULT_AUTO_GAIN_TOP_LIMIT             = 12;   // db.
+const int    DEFAULT_TOTAL_BANDWIDTH                 = 2400;
+const int    DEFAULT_BANDWIDTH_MARGIN                = 10;
+const int    DEFAULT_LOOP_RATE                       = 3;
 
 // ============= Local macros. =====================
 
@@ -83,19 +85,23 @@ int main(int argc, char* argv[])
 	ros::NodeHandle nodeHandle("~");
 
 	// Get the parameters.
-	double pAutoGainExposurePriority = DEFAULT_AUTO_GAIN_EXPOSURE_PRIORITY;
-	int    pAutoExposureTopLimit     = DEFAULT_AUTO_EXPOSURE_TOP_LIMIT; // Milisecond.
-	int    pTotalBandwidth           = DEFAULT_TOTAL_BANDWIDTH;
-	int    pBandwidthMargin          = DEFAULT_BANDWIDTH_MARGIN;
-	int    pFlagWriteImage           = 0;
-	int    pLoopRate                 = DEFAULT_LOOP_RATE;
-	std::string pOutDir              = OUT_DIR;
+	double pAutoGainExposurePriority    = DEFAULT_AUTO_GAIN_EXPOSURE_PRIORITY;
+	double pAutoGainExposureTargetLevel = DEFAULT_AUTO_GAIN_EXPOSURE_TARGET_LEVEL;
+	int    pAutoExposureTopLimit        = DEFAULT_AUTO_EXPOSURE_TOP_LIMIT; // Milisecond.
+	int    pAutoGainTopLimit            = DEFAULT_AUTO_GAIN_TOP_LIMIT;
+	int    pTotalBandwidth              = DEFAULT_TOTAL_BANDWIDTH;
+	int    pBandwidthMargin             = DEFAULT_BANDWIDTH_MARGIN;
+	int    pFlagWriteImage              = 0;
+	int    pLoopRate                    = DEFAULT_LOOP_RATE;
+	std::string pOutDir                 = OUT_DIR;
 
 	std::string pXICameraSN_0 = XI_CAMERA_SN_0;
 	std::string pXICameraSN_1 = XI_CAMERA_SN_1;
 
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pAutoGainExposurePriority", pAutoGainExposurePriority, DEFAULT_AUTO_GAIN_EXPOSURE_PRIORITY);
+	ROSLAUNCH_GET_PARAM(nodeHandle, "pAutoGainExposureTargetLevel", pAutoGainExposureTargetLevel, DEFAULT_AUTO_GAIN_EXPOSURE_TARGET_LEVEL);
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pAutoExposureTopLimit", pAutoExposureTopLimit, DEFAULT_AUTO_EXPOSURE_TOP_LIMIT);
+	ROSLAUNCH_GET_PARAM(nodeHandle, "pAutoGainTopLimit", pAutoGainTopLimit, DEFAULT_AUTO_GAIN_TOP_LIMIT);
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pTotalBandwidth", pTotalBandwidth, DEFAULT_TOTAL_BANDWIDTH);
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pBandwidthMargin", pBandwidthMargin, DEFAULT_BANDWIDTH_MARGIN);
 	ROSLAUNCH_GET_PARAM(nodeHandle, "pLoopRate", pLoopRate, DEFAULT_LOOP_RATE);
@@ -124,7 +130,9 @@ int main(int argc, char* argv[])
 	{
 		// Configure the stereo camera.
 		stereoXiCamera.set_autogain_exposure_priority(pAutoGainExposurePriority);
+		stereoXiCamera.set_autogain_exposure_target_level(pAutoGainExposureTargetLevel);
 		stereoXiCamera.set_autoexposure_top_limit(pAutoExposureTopLimit);
+		stereoXiCamera.set_autogain_top_limit(pAutoGainTopLimit);
 		stereoXiCamera.set_total_bandwidth(pTotalBandwidth);
 		stereoXiCamera.set_bandwidth_margin(pBandwidthMargin);
 
@@ -142,6 +150,7 @@ int main(int argc, char* argv[])
 
 		// Temporary variables.
 		Mat cvImages[2];        // OpenCV Mat array to hold the images.
+		sxc::StereoXiCamera::CameraParams_t cp[2]; // Camera parameters.
 		std::stringstream ss;   // String stream for outputing info.
 		ros::Time rosTimeStamp; // ROS time stamp for the header of published ROS image messages.
 
@@ -169,7 +178,7 @@ int main(int argc, char* argv[])
 			stereoXiCamera.software_trigger();
 
 			// Get images.
-			stereoXiCamera.get_images( cvImages[0], cvImages[1] );
+			stereoXiCamera.get_images( cvImages[0], cvImages[1], cp[0], cp[1] );
 
 			// Prepare the time stamp for the header.
 			rosTimeStamp = ros::Time::now();
@@ -193,7 +202,9 @@ int main(int argc, char* argv[])
 					imwrite(imgFilename, cvImages[loopIdx], jpegParams);
 				}
 				
-				ROS_INFO( "Camera %d captured image (%d, %d).", loopIdx, cvImages[loopIdx].rows, cvImages[loopIdx].cols );
+				ROS_INFO( "Camera %d captured image (%d, %d). AEAG %d, AEAGP %.2f, exp %d, gain %.1f.", 
+				          loopIdx, cvImages[loopIdx].rows, cvImages[loopIdx].cols,
+						  cp[loopIdx].AEAGEnabled, cp[loopIdx].AEAGPriority, cp[loopIdx].exposure, cp[loopIdx].gain );
 
 				// Publish images.
 				msgImage = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cvImages[loopIdx]).toImageMsg();

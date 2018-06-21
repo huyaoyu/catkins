@@ -6,12 +6,18 @@
 using namespace sxc;
 
 StereoXiCamera::StereoXiCamera(std::string &camSN0, std::string &camSN1)
-: AUTO_GAIN_EXPOSURE_PRIORITY_MAX(1.0), AUTO_GAIN_EXPOSURE_PRIORITY_MIM(0.49),
-  AUTO_EXPOSURE_TOP_LIMIT_MAX(1000), AUTO_EXPOSURE_TOP_LIMIT_MIN(1),
+: AUTO_GAIN_EXPOSURE_PRIORITY_MAX(1.0), AUTO_GAIN_EXPOSURE_PRIORITY_MIM(0.49), AUTO_GAIN_EXPOSURE_PRIORITY_DEFAULT(0.8),
+  AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MAX(60.0), AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MIN(10.0), AUTO_GAIN_EXPOSURE_TARGET_LEVEL_DEFAULT(40.0),
+  AUTO_EXPOSURE_TOP_LIMIT_MAX(1000), AUTO_EXPOSURE_TOP_LIMIT_MIN(1), AUTO_EXPOSURE_TOP_LIMIT_DEFAULT(200),
+  AUTO_GAIN_TOP_LIMIT_MAX(36.0), AUTO_GAIN_TOP_LIMIT_MIN(0.0), AUTO_GAIN_TOP_LIMIT_DEFAULT(12.0),
   TOTAL_BANDWIDTH_MAX(4000), TOTAL_BANDWIDTH_MIN(2400),
-  BANDWIDTH_MARGIN_MAX(50), BANDWIDTH_MARGIN_MIN(5),
+  BANDWIDTH_MARGIN_MAX(50), BANDWIDTH_MARGIN_MIN(5), BANDWIDTH_MARGIN_DEFAULT(10),
   TRIGGER_SOFTWARE(1), EXPOSURE_MILLISEC_BASE(1000), CAM_IDX_0(0), CAM_IDX_1(1),
-  XI_DEFAULT_TOTAL_BANDWIDTH(2400), XI_DEFAULT_BANDWIDTH_MARGIN(10)
+  XI_DEFAULT_TOTAL_BANDWIDTH(2400), XI_DEFAULT_BANDWIDTH_MARGIN(10),
+  mXi_AutoGainExposurePriority(AUTO_GAIN_EXPOSURE_PRIORITY_DEFAULT),
+  mXi_AutoExposureTopLimit(AUTO_EXPOSURE_TOP_LIMIT_DEFAULT),
+  mXi_AutoGainTopLimit(AUTO_GAIN_TOP_LIMIT_DEFAULT),
+  mXi_BandwidthMargin(BANDWIDTH_MARGIN_DEFAULT)
 {
     mCamSN[CAM_IDX_0] = camSN0;
     mCamSN[CAM_IDX_1] = camSN1;
@@ -78,6 +84,21 @@ void StereoXiCamera::get_images(cv::Mat &img0, cv::Mat &img1)
     }
 }
 
+void StereoXiCamera::get_images(cv::Mat &img0, cv::Mat &img1, CameraParams_t &camP0, CameraParams_t &camP1)
+{
+    this->get_images(img0, img1);
+
+    try
+    {
+        put_single_camera_params( mCams[CAM_IDX_0], camP0 );
+        put_single_camera_params( mCams[CAM_IDX_1], camP1 );
+    }
+    catch ( xiAPIplus_Exception& exp )
+    {
+        EXCEPTION_CAMERA_API(exp);
+    }
+}
+
 cv::Mat StereoXiCamera::get_single_image(int idx)
 {
     // Obtain the images.
@@ -93,6 +114,24 @@ cv::Mat StereoXiCamera::get_single_image(int idx)
     }
 
     return cv_mat_image;
+}
+
+void StereoXiCamera::put_single_camera_params(xiAPIplusCameraOcv &cam, CameraParams_t &cp)
+{
+    if ( true == cam.IsAutoExposureAutoGain() )
+    {
+        cp.AEAGEnabled = 1;
+    }
+    else
+    {
+        cp.AEAGEnabled = 0;
+    }
+
+    cp.AEAGPriority = (xf)( cam.GetAutoExposureAutoGainExposurePriority());
+
+    cp.exposure = (int)( cam.GetExposureTime() / 1000.0 );
+
+    cp.gain = (xf)( cam.GetGain() );
 }
 
 void StereoXiCamera::stop_acquisition(int waitMS)
@@ -213,8 +252,10 @@ void StereoXiCamera::setup_camera_common(xiAPIplusCameraOcv& cam)
 {
     // Set exposure time.
 	cam.SetAutoExposureAutoGainExposurePriority( mXi_AutoGainExposurePriority );
+    cam.SetAutoExposureAutoGainTargetLevel(mXi_AutoGainExposureTargetLevel);
 	cam.SetAutoExposureTopLimit( EXPOSURE_MILLISEC( mXi_AutoExposureTopLimit ) );
-	cam.EnableAutoExposureAutoGain();
+    cam.SetAutoGainTopLimit( mXi_AutoGainTopLimit );
+    cam.EnableAutoExposureAutoGain();
 
 	// Enable auto-whitebalance.
 	cam.EnableWhiteBalanceAuto();
@@ -225,6 +266,8 @@ void StereoXiCamera::setup_camera_common(xiAPIplusCameraOcv& cam)
 
 	// Sensor defects selector.
 	cam.SetSensorDefectsCorrectionListSelector(XI_SENS_DEFFECTS_CORR_LIST_SEL_USER0);
+	cam.EnableSensorDefectsCorrection();
+    cam.SetSensorDefectsCorrectionListSelector(XI_SENS_DEFFECTS_CORR_LIST_SEL_FACTORY);
 	cam.EnableSensorDefectsCorrection();
 
 	// Bandwith.
@@ -240,7 +283,7 @@ int StereoXiCamera::EXPOSURE_MILLISEC(int val)
 
 // ================== Getters and setters. =========================
 
-void StereoXiCamera::set_autogain_exposure_priority(double val)
+void StereoXiCamera::set_autogain_exposure_priority(xf val)
 {
     if ( val < AUTO_GAIN_EXPOSURE_PRIORITY_MIM ||
          val > AUTO_GAIN_EXPOSURE_PRIORITY_MAX )
@@ -253,9 +296,27 @@ void StereoXiCamera::set_autogain_exposure_priority(double val)
     }
 }
 
-double StereoXiCamera::get_autogain_exposure_priority(void)
+xf StereoXiCamera::get_autogain_exposure_priority(void)
 {
     return mXi_AutoGainExposurePriority;
+}
+
+void StereoXiCamera::set_autogain_exposure_target_level(xf val)
+{
+    if ( val < AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MIN ||
+         val > AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MAX )
+    {
+        EXCEPTION_ARG_OUT_OF_RANGE(val, AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MIN, AUTO_GAIN_EXPOSURE_TARGET_LEVEL_MAX);
+    }
+    else
+    {
+        mXi_AutoGainExposureTargetLevel = val;
+    }
+}
+
+xf StereoXiCamera::get_autogain_exposure_target_level(void)
+{
+    return mXi_AutoGainExposureTargetLevel;
 }
 
 void StereoXiCamera::set_autoexposure_top_limit(int tLimit)
@@ -274,6 +335,24 @@ void StereoXiCamera::set_autoexposure_top_limit(int tLimit)
 int StereoXiCamera::get_autoexposure_top_limit(void)
 {
     return mXi_AutoExposureTopLimit;
+}
+
+void StereoXiCamera::set_autogain_top_limit(xf tG)
+{
+    if ( tG < AUTO_GAIN_TOP_LIMIT_MIN ||
+         tG > AUTO_GAIN_TOP_LIMIT_MAX )
+    {
+        EXCEPTION_ARG_OUT_OF_RANGE(tG, AUTO_GAIN_TOP_LIMIT_MIN, AUTO_GAIN_TOP_LIMIT_MAX);
+    }
+    else
+    {
+        mXi_AutoGainTopLimit = tG;
+    }
+}
+
+xf StereoXiCamera::get_autogain_top_limit(void)
+{
+    return mXi_AutoGainTopLimit;
 }
 
 void StereoXiCamera::set_total_bandwidth(int b)
@@ -312,7 +391,7 @@ int StereoXiCamera::get_bandwidth_margin(void)
     return mXi_BandwidthMargin;
 }
 
-double StereoXiCamera::get_max_frame_rate(void)
+xf StereoXiCamera::get_max_frame_rate(void)
 {
     return mXi_MaxFrameRate;
 }
