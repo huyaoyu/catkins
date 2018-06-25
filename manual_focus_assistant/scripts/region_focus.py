@@ -24,6 +24,7 @@ IDX_X = 0
 IDX_Y = 1
 
 TOPIC_SUBSCRIBED = "/xic_stereo/left/image_raw"
+# TOPIC_SUBSCRIBED = "/xic_stereo/right/image_raw"
 TOPIC_PUBLISHED  = "image_regions"
 TOPIC_ANNOTATED  = "image_annotated"
 

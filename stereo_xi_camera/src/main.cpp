@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 	sensor_msgs::ImagePtr msgImage;
 
 	// The object of stereo camera based on the XIMEA cameras.
-	sxc::StereoXiCamera stereoXiCamera = sxc::StereoXiCamera(XI_CAMERA_SN_0, XI_CAMERA_SN_1);
+	sxc::StereoXiCamera stereoXiCamera = sxc::StereoXiCamera(pXICameraSN_0, pXICameraSN_1);
 
 	// Run the ROS node.
 	try
