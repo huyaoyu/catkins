@@ -23,8 +23,8 @@ IDX_WIDTH  = 1
 IDX_X = 0
 IDX_Y = 1
 
-TOPIC_SUBSCRIBED = "/xic_stereo/left/image_raw"
-# TOPIC_SUBSCRIBED = "/xic_stereo/right/image_raw"
+# TOPIC_SUBSCRIBED = "/xic_stereo/left/image_raw"
+TOPIC_SUBSCRIBED = "/xic_stereo/right/image_raw"
 TOPIC_PUBLISHED  = "image_regions"
 TOPIC_ANNOTATED  = "image_annotated"
 
@@ -181,6 +181,6 @@ class RegionFocusPublisher:
 if __name__ == '__main__':
     rospy.init_node(ROS_NODE_NAME, anonymous = True)
     
-    rfp = RegionFocusPublisher([0.1,0.1], [500, 500])
+    rfp = RegionFocusPublisher([0.1,0.1], [300, 300])
 
     rospy.spin()
