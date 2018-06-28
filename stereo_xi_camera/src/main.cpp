@@ -139,6 +139,11 @@ int main(int argc, char* argv[])
 		// Pre-open, open and configure the stereo camera.
 		stereoXiCamera.open();
 
+		// Self-adjust.
+		ROS_INFO("Perform self-adjust...");
+		stereoXiCamera.self_adjust();
+		ROS_INFO("Self-adjust done.");
+
 		// Get the sensor array.
 		std::string strSensorArray;
 		stereoXiCamera.put_sensor_filter_array(0, strSensorArray);

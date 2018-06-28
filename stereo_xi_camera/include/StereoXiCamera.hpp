@@ -9,6 +9,7 @@
 
 #include <exception>
 #include <string>
+#include <vector>
 
 // =========== System headers. =================
 
@@ -103,6 +104,7 @@ public:
     ~StereoXiCamera();
 
     void open();
+    void self_adjust(bool verbose = false);
     void start_acquisition(int waitMS = 500);
 
     void software_trigger(void);
@@ -133,6 +135,9 @@ public:
     int  get_bandwidth_margin(void);
     xf   get_max_frame_rate(void);
 
+    int  get_exposure(void);
+    xf   get_gain(void);
+
 protected:
     void prepare_before_opening();
     void open_and_common_settings();
@@ -142,6 +147,11 @@ protected:
     void put_single_camera_params(xiAPIplusCameraOcv &cam, CameraParams_t &cp);
 
     int EXPOSURE_MILLISEC(int val);
+
+    void record_settings(int nFrames, std::vector<CameraParams_t> &cp, bool verbose = false);
+    void self_adjust_exposure_gain(std::vector<CameraParams_t> &cp);
+    void self_adjust_white_balance(std::vector<CameraParams_t> &cp);
+    void set_exposure_gain(int idx, int e, xf g);
     
 public:
     const xf  AUTO_GAIN_EXPOSURE_PRIORITY_MAX;
@@ -183,6 +193,12 @@ protected:
     int mXi_TotalBandwidth;           // MBit/s.
     int mXi_BandwidthMargin;          // %.
     xf  mXi_MaxFrameRate;             // fps.
+
+    int mSelfAdjustNumOmittedFrames;
+    int mSelfAdjustNumFrames;
+
+    int mXi_Exposure; // Milisecond.
+    xf  mXi_Gain;
 };
 
 }

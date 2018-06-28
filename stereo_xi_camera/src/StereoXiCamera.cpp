@@ -17,7 +17,8 @@ StereoXiCamera::StereoXiCamera(std::string &camSN0, std::string &camSN1)
   mXi_AutoGainExposurePriority(AUTO_GAIN_EXPOSURE_PRIORITY_DEFAULT),
   mXi_AutoExposureTopLimit(AUTO_EXPOSURE_TOP_LIMIT_DEFAULT),
   mXi_AutoGainTopLimit(AUTO_GAIN_TOP_LIMIT_DEFAULT),
-  mXi_BandwidthMargin(BANDWIDTH_MARGIN_DEFAULT)
+  mXi_BandwidthMargin(BANDWIDTH_MARGIN_DEFAULT),
+  mSelfAdjustNumOmittedFrames(5), mSelfAdjustNumFrames(3)
 {
     mCamSN[CAM_IDX_0] = camSN0;
     mCamSN[CAM_IDX_1] = camSN1;
@@ -39,6 +40,119 @@ void StereoXiCamera::open()
     {
         EXCEPTION_CAMERA_API(exp);
     }
+}
+
+void StereoXiCamera::self_adjust(bool verbose)
+{
+    // Take several images and record the settings.
+    std::vector<CameraParams_t> camParams;
+
+    if ( true == verbose )
+    {
+        std::cout << "Begin self-adjust..." << std::endl;
+    }
+
+    record_settings(mSelfAdjustNumFrames, camParams, verbose);
+
+    if ( true == verbose )
+    {
+        std::cout << "Adjust exposure and gain." << std::endl;
+    }
+
+    self_adjust_exposure_gain(camParams);
+
+    if ( true == verbose )
+    {
+        std::cout << "Adjust white balance." << std::endl;
+    }
+
+    self_adjust_white_balance(camParams);
+    
+    if ( true == verbose )
+    {
+        std::cout << "Self-adjust done." << std::endl;
+    }
+}
+
+void StereoXiCamera::record_settings(int nFrames, std::vector<CameraParams_t> &vcp, bool verbose)
+{
+    // Temporary variables.
+    cv::Mat cvImages[2];                  // OpenCV Mat array to hold the images.
+    StereoXiCamera::CameraParams_t cp[2]; // Camera parameters.
+
+    // Start acquisition.
+    start_acquisition();
+
+    for ( int i = 0; i < mSelfAdjustNumOmittedFrames + mSelfAdjustNumFrames; ++i )
+    {
+        // Software trigger.
+        software_trigger();
+
+        // Get images.
+        get_images( cvImages[0], cvImages[1], cp[0], cp[1] );
+
+        if ( true == verbose )
+        {
+            std::cout << "Self-adjust image No. " << i + 1 
+                      << " with " << mSelfAdjustNumOmittedFrames 
+                      << " to omit." << std::endl; 
+        }
+
+        if ( i >= mSelfAdjustNumOmittedFrames )
+        {
+            // Record the parameters.
+            vcp.push_back( cp[0] );
+            vcp.push_back( cp[1] );
+        }
+    }
+
+    // Stop acquisition.
+    stop_acquisition();
+}
+
+void StereoXiCamera::self_adjust_exposure_gain(std::vector<CameraParams_t> &cp)
+{
+    // Caclulate the averaged exposure and gain settings.
+    int n = cp.size();
+
+    int avgExposure = 0;
+    xf  avgGain     = 0.0;
+    
+    std::vector<CameraParams_t>::iterator iter;
+
+    for ( iter = cp.begin(); iter != cp.end(); iter++ )
+    {
+        avgExposure += (*iter).exposure;
+        avgGain     += (*iter).gain;
+    }
+
+    avgExposure = (int)( 1.0 * avgExposure / n );
+    avgGain     = avgGain / n;
+
+    // Apply the exposure and gain settings to the cameras.
+    LOOP_CAMERAS_BEGIN
+        set_exposure_gain(loopIdx, avgExposure, avgGain);
+    LOOP_CAMERAS_END
+
+    mXi_Exposure = avgExposure;
+    mXi_Gain     = avgGain;
+}
+
+ void StereoXiCamera::set_exposure_gain(int idx, int e, xf g)
+ {
+     // Disable the auto exposure auto gain (AEAG).
+     mCams[idx].DisableAutoExposureAutoGain();
+
+     // Set the parameters.
+     mCams[idx].SetExposureTime( EXPOSURE_MILLISEC(e) );
+     mCams[idx].SetGain( g );
+ }
+
+void StereoXiCamera::self_adjust_white_balance(std::vector<CameraParams_t> &cp)
+{
+    // Calculate the averaged white balance settings.
+
+    // Apply the white balance settings to the cameras.
 }
 
 void StereoXiCamera::start_acquisition(int waitMS)
@@ -394,4 +508,14 @@ int StereoXiCamera::get_bandwidth_margin(void)
 xf StereoXiCamera::get_max_frame_rate(void)
 {
     return mXi_MaxFrameRate;
+}
+
+int StereoXiCamera::get_exposure(void)
+{
+    return mXi_Exposure;
+}
+
+xf StereoXiCamera::get_gain(void)
+{
+    return mXi_Gain;
 }
